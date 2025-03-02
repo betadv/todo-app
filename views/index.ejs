@@ -1,0 +1,98 @@
+			<!DOCTYPE html>
+			<html>
+				<head>
+					<title>To-Do App</title>
+					<link rel="stylesheet" href="style.css">
+					<meta name="viewport" content="width=device-width, initial-scale=1.0">
+				</head>
+				<body>
+					<h1>Welcome to my to-do app</h1>
+					<form action="/todos" method="post">
+						<label for="username">Username:</label>
+						<input type="text" id="username" name="username">
+						<input type="submit" value="Submit">
+					</form>
+					<% if (typeof todos !== 'undefined') { %>
+						<h1>To-Do List for <%= username %></h1>
+						<ul>
+							<% todos.forEach((todo) => { %>
+								<li itemID=<%= todo.itemID %> class="<%= todo.completed ? 'completed' : '' %>">
+									<input type="checkbox" name="completed" onchange="updateTodo(this)" <%= todo.completed ? 'checked' : '' %>>
+									<%= todo.text %> <button class="remove" onclick="removeTodo(this)">Remove</button>
+								</li>
+							<% }); %>
+						</ul>
+						<form action="/todos/add" method="post" id="addTodoForm">
+							<label for="todoText">Add a To-Do:</label>
+							<input type="text" id="todoText" name="todoText">
+							<input type="hidden" name="username" value="<%= username %>">
+							<input type="hidden" name="itemID" value="<%= lastID %>" id="lastIDInput">
+							<input type="submit" value="Add" onclick="addTodo(); return false;">
+						</form>
+					<% } %>
+					<script>
+						function addTodo() {
+							const form = document.getElementById("addTodoForm");
+							const todoText = form.querySelector("#todoText").value;
+							const lastIDInput = form.querySelector("#lastIDInput");
+							const newTodo = `
+								<li itemID="${Number(lastIDInput.value) + 1}" class="">
+									<input type="checkbox" name="completed" onchange="updateTodo(this)">
+									${todoText} <button class="remove" onclick="removeTodo(this)">Remove</button>
+								</li>
+							`;
+
+							fetch("/todos/add", {
+								method: "POST",
+								body: JSON.stringify({
+									todoText: todoText,
+									itemID: Number(lastIDInput.value) + 1,
+									username: "<%= username %>"
+								}),
+								headers: {
+									"Content-Type": "application/json"
+								}
+							})
+								.then((res) => {
+									return;
+								});
+							
+							const todoList = document.querySelector("ul");
+							todoList.innerHTML += newTodo;
+							lastIDInput.value = Number(lastIDInput.value) + 1;
+							form.reset();
+						}
+						function updateTodo(checkbox) {
+							const completed = checkbox.checked;
+							const text = checkbox.parentNode.textContent.trim();
+							const itemID = parseInt(checkbox.parentNode.getAttribute("itemid"));
+							fetch("/todos/update", {
+								method: "POST",
+								body: JSON.stringify({ itemID, username, completed: completed, todoText: text }),
+								headers: {
+									"Content-Type": "application/json",
+								},
+							})
+								.then((res) => {
+									return;
+								});
+							if (completed === true) checkbox.parentNode.classList.add("completed");
+							else checkbox.parentNode.classList.remove("completed");
+						}
+						function removeTodo(button) {
+							const itemID = parseInt(button.parentNode.getAttribute("itemid"));
+							fetch("/todos/remove", {
+								method: "POST",
+								body: JSON.stringify({ itemID }),
+								headers: {
+									"Content-Type": "application/json",
+								},
+							})
+								.then(() => {
+									return;
+								});
+							button.parentNode.remove();
+						}
+					</script>
+				</body>
+			</html>
